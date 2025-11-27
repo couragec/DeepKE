@@ -57,12 +57,14 @@ def extract_knowledge(instruction, schema, text):
     }, ensure_ascii=False) + '[/INST]'
     
     input_ids = tokenizer.encode(prompt, return_tensors="pt").to(device)
-    output = model.generate(
-        input_ids=input_ids, 
-        max_new_tokens=512,
-        pad_token_id=tokenizer.eos_token_id
-    )
-    result = tokenizer.decode(output.sequences[0][input_ids.size(1):], skip_special_tokens=True)
+    with torch.no_grad():
+        output = model.generate(
+            input_ids=input_ids, 
+            max_new_tokens=512,
+            pad_token_id=tokenizer.eos_token_id
+        )
+    # 修复：直接使用 output[0]，不用 .sequences
+    result = tokenizer.decode(output[0][input_ids.size(1):], skip_special_tokens=True)
     return result
 
 # 2. PDF 提取函数
@@ -104,8 +106,11 @@ def batch_extract(paragraphs, schema_config, max_chunks=20):
     print(f"\n开始批量抽取（共 {min(len(paragraphs), max_chunks)} 个段落）...")
     
     for idx, para in enumerate(paragraphs[:max_chunks]):
-        print(f"\n处理第 {idx+1}/{min(len(paragraphs), max_chunks)} 段...")
-        print(f"文本预览: {para[:50]}...")
+        print(f"\n{'='*80}")
+        print(f"处理第 {idx+1}/{min(len(paragraphs), max_chunks)} 段")
+        print(f"{'='*80}")
+        print(f"📄 完整文本:\n{para}\n")
+        print(f"{'-'*80}")
         
         # 抽取实体
         try:
@@ -113,9 +118,9 @@ def batch_extract(paragraphs, schema_config, max_chunks=20):
             ner_data = json.loads(ner_result)
             for entity_type, entities in ner_data.items():
                 results["entities"][entity_type].extend(entities)
-            print(f"  实体: {ner_result[:100]}...")
+            print(f"✅ 实体抽取结果:\n{ner_result}\n")
         except Exception as e:
-            print(f"  ⚠️ NER 失败: {e}")
+            print(f"⚠️ NER 失败: {e}\n")
         
         # 抽取关系
         try:
@@ -126,9 +131,9 @@ def batch_extract(paragraphs, schema_config, max_chunks=20):
                     for triple in triples:
                         if isinstance(triple, dict) and 'subject' in triple and 'object' in triple:
                             results["relations"].append((triple['subject'], rel_type, triple['object']))
-            print(f"  关系: {re_result[:100]}...")
+            print(f"✅ 关系抽取结果:\n{re_result}\n")
         except Exception as e:
-            print(f"  ⚠️ RE 失败: {e}")
+            print(f"⚠️ RE 失败: {e}\n")
     
     # 去重
     for entity_type in results["entities"]:
@@ -158,11 +163,11 @@ book_schema = {
 # PDF 路径
 pdf_path = "/root/projects/cwy/DeepKE/cwy/data/家庭教育-亲子关系-链接力-核心能力《非暴力.pdf"
 
-# 提取文本（前5页测试）
-paragraphs = extract_text_from_pdf(pdf_path, max_pages=5)
+# 提取文本（前100页）
+paragraphs = extract_text_from_pdf(pdf_path, max_pages=100)
 
-# 批量抽取（前10段测试）
-knowledge_graph = batch_extract(paragraphs, book_schema, max_chunks=10)
+# 批量抽取（所有段落，最多500段）
+knowledge_graph = batch_extract(paragraphs, book_schema, max_chunks=500)
 
 # 打印统计
 print("\n" + "="*60)

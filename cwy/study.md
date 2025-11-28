@@ -1,3 +1,24 @@
+##11.27
+cd /root/projects/cwy/DeepKE/cwy/src
+./start_extract.sh
+
+
+
+cd /root/projects/cwy/DeepKE
+
+# 1. 查看状态
+git status
+
+# 2. 添加修改的文件
+git add .
+
+# 3. 提交
+git commit -m "你的提交信息"
+
+# 4. 推送（使用专用 SSH 密钥）
+GIT_SSH_COMMAND='ssh -i ~/.ssh/couragec_id_ed25519' git push origin cwy
+
+
 ## 11.25
 
 DeepKE-cnSchema

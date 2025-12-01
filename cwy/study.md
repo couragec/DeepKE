@@ -1,3 +1,7 @@
+##11.28
+
+
+
 ##11.27
 cd /root/projects/cwy/DeepKE/cwy/src
 ./start_extract.sh
